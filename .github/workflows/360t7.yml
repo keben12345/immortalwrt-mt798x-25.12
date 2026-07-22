@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
-
+permissions:
+    contents: write
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -190,7 +191,7 @@ jobs:
       # 发布 Release
       - name: Create Release and Upload Assets
         if: steps.check.outputs.need_build == 'true'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
 
         with:
 
