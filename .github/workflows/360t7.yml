@@ -1,4 +1,4 @@
-name: Auto ImmortalWrt 25.12 for 360T7
+name: Auto ImmortalWrt 25.12 for 360T7-new
 
 on:
   workflow_dispatch:
