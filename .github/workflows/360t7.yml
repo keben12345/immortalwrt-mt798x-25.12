@@ -1,226 +1,166 @@
-name: Auto ImmortalWrt 25.12 for 360T7-new
+name: Build ImmortalWrt 25.12 360T7
+
 
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
+
+
 permissions:
-    contents: write
+  contents: write
+
+
 jobs:
   build:
+
     runs-on: ubuntu-22.04
+
 
     steps:
 
-      # 拉取自己的配置仓库
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+    - name: Checkout config
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
 
 
-      # 清理 Github Runner 空间
-      - name: Free disk space
-        run: |
-          echo "Before cleanup:"
-          df -h
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo apt-get clean
 
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/powershell
+        df -h
 
-          sudo apt-get clean
 
-          echo "After cleanup:"
-          df -h
+    - name: Clone ImmortalWrt source
+      run: |
 
+        git clone \
+        --depth=1 \
+        -b 25.12 \
+        https://github.com/chasey-dev/immortalwrt-mt798x-rebase.git \
+        openwrt
 
-      # 获取日期
-      - name: Get current date
-        id: date
-        run: |
-          echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
 
+    - name: Prepare feeds
+      run: |
 
-      # 检查上游更新
-      - name: Check upstream updates
-        id: check
-        run: |
+        cd openwrt
 
-          UPSTREAM_COMMIT=$(git ls-remote --heads \
-          https://github.com/chasey-dev/immortalwrt-mt798x-rebase.git \
-          25.12 | awk '{print $1}')
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
 
-          echo "upstream_commit=$UPSTREAM_COMMIT" >> $GITHUB_OUTPUT
 
 
-          if [ -f .last_sync_commit ]; then
-            LAST_COMMIT=$(cat .last_sync_commit)
-          else
-            LAST_COMMIT=""
-          fi
+    - name: Apply config
+      run: |
 
+        cp defconfig/rax3000m-360T7.config \
+        openwrt/.config
 
-          if [ "$LAST_COMMIT" = "$UPSTREAM_COMMIT" ] \
-          && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
 
-            echo "need_build=false" >> $GITHUB_OUTPUT
+        cd openwrt
 
-          else
+        make defconfig
 
-            echo "need_build=true" >> $GITHUB_OUTPUT
 
-          fi
+        echo "===== Target ====="
 
+        grep qihoo .config || true
 
-      # 无更新跳过
-      # - name: Skip if no update
-      #  if: steps.check.outputs.need_build == 'false'
-      #  run: |
-      #    echo "上游无更新，跳过编译"
-      #    exit 0
 
+    - name: Download sources
+      run: |
 
+        cd openwrt
 
-      # 编译
-      - name: Build firmware
-        if: steps.check.outputs.need_build == 'true'
-        run: |
+        make download -j2
 
-          echo "Clone ImmortalWrt source"
+        df -h
 
-          git clone \
-          --depth=1 \
-          -b 25.12 \
-          https://github.com/chasey-dev/immortalwrt-mt798x-rebase.git \
-          openwrt
 
 
-          cd openwrt
+    - name: Build firmware
+      run: |
 
+        cd openwrt
 
-          echo "Update feeds"
+        make -j2
 
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
 
+    - name: Check generated images
+      run: |
 
-          echo "Copy config"
+        echo "===== Images ====="
 
-          cp ../defconfig/rax3000m-360T7.config .config
+        ls -lh \
+        openwrt/bin/targets/mediatek/filogic/
 
 
-          echo "Generate config"
+        echo "===== 360T7 ====="
 
-          make defconfig
+        find \
+        openwrt/bin/targets/mediatek/filogic \
+        -iname "*360t7*"
 
 
-          echo "Disk before download"
+        echo "===== ITB ====="
 
-          df -h
-          du -sh .
+        find \
+        openwrt/bin/targets/mediatek/filogic \
+        -name "*.itb"
 
 
-          echo "Download sources"
 
-          make download -j2
+    - name: Prepare release files
+      run: |
 
+        mkdir release
 
-          echo "Disk before compile"
 
-          df -h
+        cp openwrt/bin/targets/mediatek/filogic/*.itb \
+        release/ || true
 
 
-          echo "Start compile"
+        cp openwrt/bin/targets/mediatek/filogic/sha256sums \
+        release/ || true
 
-          make -j2 V=s
 
+        ls -lh release
 
-          echo "Remove packages"
 
-          rm -rf \
-          bin/targets/mediatek/filogic/packages
 
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
 
-          echo "Build result"
+      with:
 
-          ls -lh bin/targets/mediatek/filogic/
+        tag_name:
+          build-${{ github.run_number }}
 
+        name:
+          360T7 ImmortalWrt 25.12 build-${{ github.run_number }}
 
-      # 保存同步记录
-      - name: Update sync record
-        if: steps.check.outputs.need_build == 'true'
-        run: |
+        body: |
 
-          echo "${{ steps.check.outputs.upstream_commit }}" \
-          > .last_sync_commit
+          ImmortalWrt 25.12
 
+          Device:
+          Qihoo 360T7
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          Kernel:
+          6.12
 
 
-          git add .last_sync_commit
+        files: |
+          release/*.itb
+          release/sha256sums
 
-          git commit \
-          -m "Update sync record" || true
 
+      env:
 
-          git push || true
-
-
-
-      # 上传 Actions Artifact
-      - name: Upload firmware
-        if: steps.check.outputs.need_build == 'true'
-        uses: actions/upload-artifact@v4
-
-        with:
-
-          name: immortalwrt-25.12-360t7-firmware
-
-          path: |
-            openwrt/bin/targets/mediatek/filogic/*.bin
-            openwrt/bin/targets/mediatek/filogic/sha256sums
-
-          if-no-files-found: warn
-
-
-
-      # 发布 Release
-      - name: Create Release and Upload Assets
-        if: steps.check.outputs.need_build == 'true'
-        uses: softprops/action-gh-release@v2
-
-        with:
-
-          name: "360T7 固件 ${{ steps.date.outputs.date }} #${{ github.run_number }}"
-
-          tag_name: "build-${{ steps.date.outputs.date }}-${{ github.run_number }}"
-
-
-          body: |
-
-            ## 自动编译固件
-
-            - 日期：${{ steps.date.outputs.date }}
-            - 编号：#${{ github.run_number }}
-            - 设备：360T7
-            - 平台：mediatek filogic
-            - 内核：6.12
-            - ImmortalWrt 25.12
-            - 上游：
-              chasey-dev/immortalwrt-mt798x-rebase
-
-
-          files: |
-            
-            openwrt/bin/targets/mediatek/filogic/*.itb
-            openwrt/bin/targets/mediatek/filogic/*.bin
-            openwrt/bin/targets/mediatek/filogic/sha256sums
-
-
-        env:
-
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN:
+          ${{ secrets.GITHUB_TOKEN }}
