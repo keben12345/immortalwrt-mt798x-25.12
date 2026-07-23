@@ -215,7 +215,8 @@ jobs:
 
 
           files: |
-
+            
+            openwrt/bin/targets/mediatek/filogic/*.itb
             openwrt/bin/targets/mediatek/filogic/*.bin
             openwrt/bin/targets/mediatek/filogic/sha256sums
 
