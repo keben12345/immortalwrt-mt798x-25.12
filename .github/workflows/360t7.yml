@@ -75,11 +75,11 @@ jobs:
 
 
       # 无更新跳过
-      - name: Skip if no update
-        if: steps.check.outputs.need_build == 'false'
-        run: |
-          echo "上游无更新，跳过编译"
-          exit 0
+      # - name: Skip if no update
+      #  if: steps.check.outputs.need_build == 'false'
+      #  run: |
+      #    echo "上游无更新，跳过编译"
+      #    exit 0
 
 
 
