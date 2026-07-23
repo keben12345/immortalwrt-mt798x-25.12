@@ -58,7 +58,7 @@ jobs:
     - name: Apply config
       run: |
 
-        cp defconfig/rax3000m-360T7.config \
+        cp defconfig/360T7.config \
         openwrt/.config
 
 
