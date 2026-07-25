@@ -63,7 +63,10 @@ jobs:
 
 
         cd openwrt
-
+        
+        # 修改默认 LAN IP 为 192.168.1.88
+        sed -i 's/192.168.1.1/192.168.1.88/g' package/base-files/files/bin/config_generate
+        
         make defconfig
 
 
