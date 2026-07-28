@@ -3,8 +3,8 @@ name: Build ImmortalWrt 25.12-360T7-new
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'
+  # schedule:
+  #  - cron: '0 0 * * *'
 
 
 permissions:
