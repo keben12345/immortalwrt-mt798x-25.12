@@ -1,0 +1,169 @@
+name: Build ImmortalWrt 25.12-360T7-new
+
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #  - cron: '0 0 * * *'
+
+
+permissions:
+  contents: write
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+
+    steps:
+
+    - name: Checkout config
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo apt-get clean
+
+        df -h
+
+
+    - name: Clone ImmortalWrt source
+      run: |
+
+        git clone \
+        --depth=1 \
+        -b 25.12 \
+        https://github.com/immortalwrt/immortalwrt.git \
+        openwrt
+
+
+    - name: Prepare feeds
+      run: |
+
+        cd openwrt
+
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
+
+
+    - name: Apply config
+      run: |
+
+        cp defconfig/360T7-imm.config \
+        openwrt/.config
+
+
+        cd openwrt
+        
+        # 修改默认 LAN IP 为 192.168.1.88
+        sed -i 's/192.168.1.1/192.168.1.88/g' package/base-files/files/bin/config_generate
+        
+        make defconfig
+
+
+        echo "===== Target ====="
+
+        grep qihoo .config || true
+
+
+    - name: Download sources
+      run: |
+
+        cd openwrt
+
+        make download -j2
+
+        df -h
+
+
+
+    - name: Build firmware
+      run: |
+
+        cd openwrt
+
+        make -j2
+
+
+    - name: Check generated images
+      run: |
+
+        echo "===== Images ====="
+
+        ls -lh \
+        openwrt/bin/targets/mediatek/filogic/
+
+
+        echo "===== 360T7 ====="
+
+        find \
+        openwrt/bin/targets/mediatek/filogic \
+        -iname "*360t7*"
+
+
+        echo "===== ITB ====="
+
+        find \
+        openwrt/bin/targets/mediatek/filogic \
+        -name "*.itb"
+
+
+
+    - name: Prepare release files
+      run: |
+
+        mkdir release
+
+
+        cp openwrt/bin/targets/mediatek/filogic/*.itb \
+        release/ || true
+
+
+        cp openwrt/bin/targets/mediatek/filogic/sha256sums \
+        release/ || true
+
+
+        ls -lh release
+
+
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+
+      with:
+
+        tag_name:
+          build-${{ github.run_number }}
+
+        name:
+          360T7 ImmortalWrt 25.12 build-${{ github.run_number }}
+
+        body: |
+
+          ImmortalWrt 25.12
+
+          Device:
+          Qihoo 360T7
+
+          Kernel:
+          6.12
+
+
+        files: |
+          release/*.itb
+          release/sha256sums
+
+
+      env:
+
+        GITHUB_TOKEN:
+          ${{ secrets.GITHUB_TOKEN }}
