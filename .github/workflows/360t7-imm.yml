@@ -149,7 +149,7 @@ jobs:
 
         body: |
 
-          ImmortalWrt 25.12
+          ImmortalWrt 25.12-imm
 
           Device:
           Qihoo 360T7
