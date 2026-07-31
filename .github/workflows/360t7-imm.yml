@@ -58,7 +58,7 @@ jobs:
     - name: Apply config
       run: |
 
-        cp defconfig/360T7-imm.config \
+        cp defconfig/360t7-imm.config \
         openwrt/.config
 
 
