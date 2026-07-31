@@ -40,7 +40,7 @@ jobs:
 
         git clone \
         --depth=1 \
-        -b 25.12 \
+        -b master \
         https://github.com/immortalwrt/immortalwrt.git \
         openwrt
 
