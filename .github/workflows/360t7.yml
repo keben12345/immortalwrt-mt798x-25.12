@@ -53,9 +53,7 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    # ========================================================== 
-    # Rust compatibility fix 
-    # ========================================================== 
+     
     - name: Fix Rust build 
       run: | 
         cd openwrt
