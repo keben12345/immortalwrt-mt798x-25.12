@@ -53,57 +53,53 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    # ========================================================== 
-    # Rust compatibility fix
-    # ==========================================================
-  
-    - name: Fix Rust build
-      run: |
-       cd openwrt
-       
-       echo "=========================================="
-       echo "Rust package information"
-       echo "=========================================="
-       if [ -f feeds/packages/lang/rust/Makefile ]; then
-         grep -nE \
-          'PKG_VERSION|PKG_RELEASE|RUST_VERSION|LLVM|download-ci-llvm' \
-           feeds/packages/lang/rust/Makefile || true
-        fi
-
-       echo "=========================================="
-       echo "Rust patches"
-       echo "=========================================="
-
+# ========================================================== 
+# Rust compatibility fix 
+# ========================================================== 
+    - name: Fix Rust build 
+      run: | 
+        cd openwrt
+        echo "==========================================" 
+        echo "Rust package information" 
+        echo "==========================================" 
+        if [ -f feeds/packages/lang/rust/Makefile ]; then 
+        grep -nE \ 
+        'PKG_VERSION|PKG_RELEASE|RUST_VERSION|LLVM|download-ci-llvm' \ 
+        feeds/packages/lang/rust/Makefile || true 
+        fi 
+        echo "==========================================" 
+        echo "Rust patches" 
+        echo "==========================================" 
         # 某些 Rust bootstrap 版本会尝试下载已经不存在的 
-        # CI LLVM artifact。
-        #
+        # CI LLVM artifact。 
+        # 
         # 如果 Makefile / patch 中存在： 
         # --set=llvm.download-ci-llvm=true 
         # 则改成 false。 
-        #
+        # 
         # 如果不存在，则不做任何修改。
-        find feeds/packages/lang/rust \
-          -type f \
-           \( -name "*.mk" -o -name "Makefile" -o -name "*.patch" \) \
-           -print0 2>/dev/null |
-          while IFS= read -r -d '' file; do
-          
-          sed -i \
-              's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' \ "$file" || true
-          sed -i \
-            's/download-ci-llvm *= *true/download-ci-llvm = false/g' \ 
-            "$file" || true
+     
+        find feeds/packages/lang/rust \ 
+         -type f \ 
+         \( -name "*.mk" -o -name "Makefile" -o -name "*.patch" \) \ 
+         -print0 2>/dev/null | 
+        while IFS= read -r -d '' file; do 
+  
+        sed -i \ 
+        's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' \ 
+        "$file" || true 
 
-         done
+        sed -i \ 's/download-ci-llvm *= *true/download-ci-llvm = false/g' \ 
+        "$file" || true 
+        done 
          echo "==========================================" 
          echo "Rust configuration after patch" 
-         echo "=========================================="
-
-        grep -R \
-          -n \
-          "download-ci-llvm" \
-          feeds/packages/lang/rust \
-          2>/dev/null || true
+         echo "==========================================" 
+        grep -R \ 
+        -n \ 
+        "download-ci-llvm" \
+        feeds/packages/lang/rust \ 
+        2>/dev/null || true
 
     - name: Apply config
       run: |
