@@ -54,49 +54,55 @@ jobs:
         ./scripts/feeds install -a
 
      
-    - name: Fix Rust build 
-      run: | 
+    - name: Fix Rust build
+      run: |
         cd openwrt
-        echo "==========================================" 
-        echo "Rust package information" 
-        echo "==========================================" 
-        if [ -f feeds/packages/lang/rust/Makefile ]; then 
-           grep -nE 'PKG_VERSION|PKG_RELEASE|RUST_VERSION|LLVM|download-ci-llvm' \
-           feeds/packages/lang/rust/Makefile || true 
-        fi 
-        echo "==========================================" 
-        echo "Rust patches" 
-        echo "==========================================" 
-        # 某些 Rust bootstrap 版本会尝试下载已经不存在的 
-        # CI LLVM artifact。 
-        # 
-        # 如果 Makefile / patch 中存在： 
-        # --set=llvm.download-ci-llvm=true 
-        # 则改成 false。 
-        # 
-        # 如果不存在，则不做任何修改。
-     
-        find feeds/packages/lang/rust \
-         -type f \
-         \( -name "*.mk" -o -name "Makefile" -o -name "*.patch" \) \
-         -print0 2>/dev/null | 
-        while IFS= read -r -d '' file; do 
-  
-          sed -i \ 
-           's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' \
-           "$file" || true 
 
-          sed -i \ 's/download-ci-llvm *= *true/download-ci-llvm = false/g' \
-           "$file" || true 
-        done 
-        echo "==========================================" 
-        echo "Rust configuration after patch" 
-        echo "==========================================" 
-        grep -R \ 
-          -n \ 
+        echo "=========================================="
+        echo "Rust package information"
+        echo "=========================================="
+
+        RUST_MAKEFILE="feeds/packages/lang/rust/Makefile"
+
+        if [ ! -f "$RUST_MAKEFILE" ]; then
+          echo "ERROR: Rust Makefile not found!"
+          exit 1
+        fi
+
+        grep -nE \
+          'PKG_VERSION|PKG_RELEASE|RUST_VERSION|LLVM|download-ci-llvm' \
+          "$RUST_MAKEFILE" || true
+
+        echo "=========================================="
+        echo "Disable Rust CI LLVM download"
+        echo "=========================================="
+
+        # Rust 1.94.0 当前 Makefile 中：
+        #
+        # --set=llvm.download-ci-llvm=true
+        #
+        # 改为 false，避免 bootstrap 尝试下载
+        # 已不存在/不匹配的 CI LLVM artifact。
+
+        sed -i \
+          's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' \
+          "$RUST_MAKEFILE"
+
+        echo "=========================================="
+        echo "Verify Rust configuration"
+        echo "=========================================="
+
+        grep -n \
           "download-ci-llvm" \
-          feeds/packages/lang/rust \ 
-          2>/dev/null || true
+          "$RUST_MAKEFILE" || true
+
+        echo "=========================================="
+        echo "Rust version"
+        echo "=========================================="
+
+        grep -n \
+          "PKG_VERSION" \
+          "$RUST_MAKEFILE" || true
 
     - name: Apply config
       run: |
