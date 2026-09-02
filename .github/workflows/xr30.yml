@@ -18,7 +18,7 @@ jobs:
       - name: Build firmware
         run: |
           # 克隆 25.12 仓库源码
-          git clone https://github.com/tfnhui/immortalwrt-mt798x-25.12.git openwrt
+          git clone https://github.com/keben12345/immortalwrt-mt798x-25.12.git openwrt
           cd openwrt
           # 修改默认 LAN IP 为 192.168.1.88
           sed -i 's/192.168.1.1/192.168.1.88/g' package/base-files/files/bin/config_generate
