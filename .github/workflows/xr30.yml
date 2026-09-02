@@ -1,4 +1,4 @@
-name: Build ImmortalWrt 25.12 for RAX3000M
+name: Build ImmortalWrt 25.12 for xr30-nand
 
 on:
   workflow_dispatch:
